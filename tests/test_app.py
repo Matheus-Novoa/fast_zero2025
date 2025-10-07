@@ -33,6 +33,32 @@ def test_create_user(client):
     }
 
 
+def test_create_user_username_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': user.username,
+            'email': 'alice@example.com',
+            'password': 'secret',
+        },
+    )
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Username already exists'}
+
+
+def test_create_user_email_already_exists(client, user):
+    response = client.post(
+        '/users/',
+        json={
+            'username': 'alice',
+            'email': user.email,
+            'password': 'secret',
+        },
+    )
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Email already exists'}
+
+
 def test_read_users(client):
     response = client.get('/users')
     assert response.status_code == HTTPStatus.OK
@@ -45,11 +71,15 @@ def test_read_users_with_users(client, user):
     assert response.json() == {'users': [user_schema]}
 
 
-# def test_read_user(client, user):
-#     user_schema = UserPublic.model_validate(user).model_dump()
-#     response = client.get('/users/1')
-#     assert response.status_code == HTTPStatus.OK
-#     assert response.json() == {'user': user_schema}
+def test_read_user(client, user):
+    response = client.get(f'/users/{user.id}')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+    }
 
 
 def test_read_user_not_found(client):
