@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from fast_zero2025.schemas import UserPublic
+from fast_zero2025.security import create_access_token
 
 
 def test_root_deve_retornar_ola_mundo(client):
@@ -102,34 +103,12 @@ def test_update_user(client, user, token):
     }
 
 
-# def test_update_user_not_found(client, token):
-#     response = client.put(
-#         '/users/999',
-#         headers={'Authorization': f'Bearer {token}'},
-#         json={
-#             'username': 'bob',
-#             'email': 'bob@example.com',
-#             'password': 'mynewpassword',
-#         },
-#     )
-#     assert response.status_code == HTTPStatus.NOT_FOUND
-#     assert response.json() == {'detail': 'User not found'}
-
-
 def test_delete_user(client, user, token):
     response = client.delete(
         f'/users/{user.id}', headers={'Authorization': f'Bearer {token}'}
     )
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
-
-
-# def test_delete_user_not_found(client, token):
-#     response = client.delete(
-#         '/users/999', headers={'Authorization': f'Bearer {token}'}
-#     )
-#     assert response.status_code == HTTPStatus.NOT_FOUND
-#     assert response.json() == {'detail': 'User not found'}
 
 
 def test_update_integrity_error(client, user, token):
@@ -169,3 +148,27 @@ def test_get_token(client, user):
     assert response.status_code == HTTPStatus.OK
     assert token['token_type'] == 'Bearer'
     assert 'access_token' in token
+
+
+def test_get_current_user_with_no_email(client):
+    data = {'no-email': 'test'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1', headers={'Authorization': f'Bearer {token}'}
+    )
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_get_current_user_with_no_user(client):
+    data = {'sub': 'test@test'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
